@@ -1,0 +1,5 @@
+PORT=8080
+ENVIRONMENT_TAG=dev
+DATABASE=mongodb://localhost/sentral-unit
+SECRET_KEY=
+SALT=
