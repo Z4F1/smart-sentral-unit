@@ -13,6 +13,8 @@ app.use(morgan("tiny"))
 
 app.use(api)
 
-app.listen(80, () => {
-    console.log("running")
+const server = app.listen(8080, () => {
+    console.log("Discovery service listening on:", 8080)
 })
+
+require("./lib/graceful.js")(server)

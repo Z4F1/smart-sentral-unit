@@ -2,6 +2,7 @@ package models
 
 type Device struct {
 	DeviceID string `json:"deviceId"`
+	IP       string `json:"ip"`
 	Active   bool   `json:"active"`
 }
 

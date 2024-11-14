@@ -2,9 +2,6 @@ services:
   nats:
     image: nats:alpine
     restart: always
-    ports:
-      - "4222:4222"
-      - "8222:8222"
     env_file:
       - ./.env
     command: --user ${NATS_USERNAME} --pass ${NATS_PASSWORD} 
@@ -23,6 +20,7 @@ services:
 
   discovery_service:
     build: ./services/discovery_service
+    restart: always
     env_file:
       - ./.env
     networks:
@@ -31,6 +29,7 @@ services:
       
   device_service:
     build: ./services/device_service
+    restart: always
     env_file:
       - ./.env
       - ./db.env
@@ -46,7 +45,6 @@ networks:
   services_network:
     name: service-network
     driver: bridge
-
     ipam:
       config:
         - subnet: 192.168.1.0/24

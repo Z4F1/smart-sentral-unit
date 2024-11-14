@@ -23,21 +23,24 @@ func NewDeviceController() (*DeviceController, error) {
 		return nil, err
 	}
 
-	devices, err := utils.Request[[]models.Device]("GET", "http://"+os.Getenv("DISCOVERY_IP")+"/devices")
+	return &DeviceController{natsClient: natsClient}, nil
+}
+
+func (dc DeviceController) initDevices() error {
+	devices, err := utils.Request[[]models.Device]("GET", "http://"+os.Getenv("DISCOVERY_IP")+":8080/devices")
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &DeviceController{natsClient: natsClient, devices: devices}, nil
-}
+	dc.devices = devices
 
-func (dc DeviceController) init() {
 	fmt.Printf("Loading device data %s\n", dc.devices[0].DeviceID)
+
+	return nil
 }
 
-func (dc DeviceController) Start() error {
-	dc.init()
+func (dc DeviceController) initEndpoints() error {
 
 	dc.natsClient.Subscribe("device.connect", func(d models.Device) {
 		fmt.Printf("%s", d.DeviceID)
@@ -51,21 +54,37 @@ func (dc DeviceController) Start() error {
 		fmt.Printf("%s", d.DeviceID)
 	})
 
-	dc.waitForShutdown()
-
-	err := dc.natsClient.Drain()
-	if err != nil {
-		return fmt.Errorf("failed draining nats: %v", err)
-	}
-
 	return nil
 }
 
-func (dc *DeviceController) waitForShutdown() {
+func (dc DeviceController) Start() error {
+	err := dc.initDevices()
+
+	if err != nil {
+		return fmt.Errorf("failed to retrieve device data: %v", err)
+	}
+
+	err = dc.initEndpoints()
+
+	if err != nil {
+		return fmt.Errorf("failed to initiate nats endpoints: %v", err)
+	}
+
+	return dc.waitForShutdown()
+}
+
+func (dc *DeviceController) waitForShutdown() error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	fmt.Println("Subscribed and waiting.")
 	<-sigs // Block until a termination signal is received
-	fmt.Println("Shutting down.")
+
+	fmt.Println("Service shutdown.")
+	err := dc.natsClient.Drain()
+	if err != nil {
+		return fmt.Errorf("failed to drain client: %v", err)
+	}
+
+	return nil
 }
