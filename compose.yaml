@@ -1,0 +1,53 @@
+services:
+  nats:
+    image: nats:alpine
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    env_file:
+      - ./.env
+    command: --user ${NATS_USERNAME} --pass ${NATS_PASSWORD} 
+    networks:
+      services_network:
+        ipv4_address: ${NATS_IP}
+  
+  mongodb:
+    image: mongo
+    restart: always
+    env_file:
+      - ./db.env
+    networks:
+      services_network:
+        ipv4_address: ${MONGO_IP}
+
+  discovery_service:
+    build: ./services/discovery_service
+    env_file:
+      - ./.env
+    networks:
+      services_network:
+        ipv4_address: ${DISCOVERY_IP}
+      
+  device_service:
+    build: ./services/device_service
+    env_file:
+      - ./.env
+      - ./db.env
+    networks:
+      services_network:
+        ipv4_address: ${DEVICE_IP}
+    depends_on:
+      - nats
+      - mongodb
+      - discovery_service
+
+networks:
+  services_network:
+    name: service-network
+    driver: bridge
+
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          gateway: 192.168.1.1
